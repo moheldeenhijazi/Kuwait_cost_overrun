@@ -1,0 +1,80 @@
+```
+Linear Model 
+```{r}
+# Linear Models
+cost.linear.model.fit1 <- lm(total.value ~ contractor.class + owner.class + contract.type, data=cost_data)
+cost.linear.model.fit2 <- lm(total.value ~ contractor.class + owner.class, data=cost_data)
+cost.linear.model.fit3 <- lm(total.value ~ owner.class, data=cost_data)
+# ANOVA to compare the models
+anova(cost.linear.model.fit1, cost.linear.model.fit2, test="Chisq")
+# ACCEPT the null hypothesis,(cost.linear.model.fit1) is not significantly different  than (cost.linear.model.fit2) at the alpha = 0.05
+anova(cost.linear.model.fit1, cost.linear.model.fit3, test="Chisq")
+# REJECT the null hypothesis (cost.linear.model.fit1) IS significantly different than (cost.linear.model.fit3)at the alpha = 0.05
+# meaning, cost.linear.model.fit1 is the best, because it has the lowest RSS and is significantly different than both the other models.
+```
+PCA
+```{r}
+# PCA
+cost.pca <- prcomp(cost_data[,c(1:3)], center = TRUE, scale. = TRUE)
+summary(cost.pca)
+# Visualizations
+fviz_eig(cost.pca)
+fviz_pca_var(cost.pca, col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE)
+# Using PC data (making PC dataset)
+pc.cost.data <- data.frame(cost.pca[["x"]])
+pc.cost.data <- cbind(pc.cost.data, cost_data$total.value) 
+colnames(pc.cost.data)[4] <- "total.value"
+```
+Linear Models (Using PCA Data)
+```{r}
+# Linear Models
+cost.linear.model.fit1.pca <- lm(total.value ~ PC1 + PC2 + PC3, data=pc.cost.data)
+cost.linear.model.fit2.pca <- lm(total.value ~ PC1 + PC2, data=pc.cost.data)
+cost.linear.model.fit3.pca <- lm(total.value ~ PC1 + PC3, data=pc.cost.data)
+# ANOVA to compare the models
+anova(cost.linear.model.fit1.pca, cost.linear.model.fit2.pca, test="Chisq")
+# ACCEPT the null hypothesis,(cost.linear.model.fit1) isn't significantly different than (cost.linear.model.fit2)at alpha = 0.05
+anova(cost.linear.model.fit1.pca, cost.linear.model.fit3.pca, test="Chisq")
+# I can REJECT the null hypothesis (the models are the same) and safely say that the first model (cost.linear.model.fit1) 
+# IS significantly different (at the alpha = 0.05 level) than the third model (cost.linear.model.fit3)
+# cost.linear.model.fit1.pca is the best model for the data because it has the lowest RSS of any model and is significantly 
+# different than both of the other models (cost.linear.model.fit2.pca, cost.linear.model.fit3.pca)
+# GRAPH THE RESULTS 
+ggplot(pc.cost.data,aes(y = total.value, x = PC1 + PC2 + PC3)) +
+  geom_point(size = 2.75, alpha = 0.7) + 
+  geom_smooth(size = 1.5, method="lm", formula = y ~ x) + 
+  labs(title = "Linear Model", subtitle = "(using PCA data)", y = "Total Value", x = "")
+```
+Polynomial Regression
+```{r}
+# Polynomial Regression Models (2nd and 3rd degree)
+poly.regression.fit1 <- cost_data$total.value ~ poly(cost_data$contractor.class + cost_data$contract.type + cost_data$owner.class, 2, raw = TRUE)
+poly.regression.fit2 <- cost_data$total.value ~ poly(cost_data$contractor.class + cost_data$contract.type + cost_data$owner.class, 3, raw = TRUE)
+anova(poly.regression.fit1, poly.regression.fit2, test="Chisq")
+```
+Locally Weighted Regression 
+```{r}
+# GRAPH 
+ggplot(cost_data, aes(y = total.value, x = contractor.class + owner.class + contract.type)) +
+  geom_point(size = 2.75, alpha = 0.7) + geom_smooth(size = 1.5, method="loess") + 
+  labs(title = "Locally Weighted Regression Model", y = "Total Value", x = "")
+```
+Regression Trees
+```{r}
+tree.cost.linear.fit1 <- rpart(total.value ~ contractor.class + owner.class + contract.type, data = cost_data)
+rpart.plot(tree.cost.linear.fit1, type = 4)
+# Owner class is roughly two times more important to the dependednt variable than contractor class
+tree.cost.linear.fit1$variable.importance
+# Train
+train <- sample(1:nrow(cost_data), nrow(cost_data)/2)
+tree.performance.fit1 <- rpart(total.value ~ contractor.class + owner.class + contract.type, subset = train, data = cost_data)
+summary(tree.performance.fit1)
+tree.performance.fit1$variable.importance
+# According to the model, contractor class was the MOST important variable behind owner class and contract type
+# GRAPH THE RESULTS
+rpart.plot(tree.performance.fit1)
+```
+
+
